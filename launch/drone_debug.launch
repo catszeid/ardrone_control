@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="ardrone_autonomy" name="driver" type="ardrone_driver"/>
+  <node pkg="ardrone_control" name="leap_control" type="leap_control.py"/>
+  <node pkg="image_view" name="camera_image" type="image_view">
+    <param name="image_transport" value="compressed"/>
+    <param name="autosize" value="true"/>
+    <remap from="image" to="/ardrone/image_raw" />
+  </node>
+  <node pkg="rqt_console" name="console" type="rqt_console"/>
+</launch>
