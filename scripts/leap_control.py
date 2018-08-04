@@ -45,17 +45,29 @@ from ardrone_autonomy.msg import Navdata
 
 #wrapper for Twist message
 class my_twist:
-    def __init__():
+    def __init__(self):
         self.val = Twist()
 
     #reset the values of the Twist
     def reset(self):
-        this.val.linear.x = 0.0
-        this.val.linear.y = 0.0
-        this.val.linear.z = 0.0
-        this.val.angular.x = 0.0
-        this.val.angular.y = 0.0
-        this.val.angular.z = 0.0
+        self.val.linear.x = 0.0
+        self.val.linear.y = 0.0
+        self.val.linear.z = 0.0
+        self.val.angular.x = 0.0
+        self.val.angular.y = 0.0
+        self.val.angular.z = 0.0
+
+    #check if all parameters of the Twist are 0
+    def is_zero(self):
+        if (self.val.linear.x == 0.0 and
+            self.val.linear.y == 0.0 and
+            self.val.linear.z == 0.0 and
+            self.val.angular.x == 0.0 and
+            self.val.angular.y == 0.0 and
+            self.val.angular.z == 0.0):
+            return True
+        else:
+            return False
 
 #drone info class
 class drone_info:
@@ -112,13 +124,11 @@ class drone_info:
 def talker(di):
 
     #get frame from controller
-    frame = controller.frame()
+    frame = di.controller.frame()
     #get the first hand detected
     hands = frame.hands
     #output string
     status = ""
-    #is there movement?
-    moved = False
     #twist variable
     vel_msg = my_twist()
     #reset twist parameters
@@ -146,80 +156,60 @@ def talker(di):
             #forward (ROS +x)
             status += "forward | "
             vel_msg.val.linear.x = di.x_magnitude
-            moved = True
         elif (pitch > di.pitch_offset_back):
             #backward (ROS -x)
             status += "backward | "
             vel_msg.val.linear.x = -di.x_magnitude
-            moved = True
         #ROS y axis (LEAP -x)
+        #set roll offsets
         if (first_hand.is_right):
-            if (roll > di.r_roll_offset_left):
-                #move left ROS y
-                status += "left | "
-                vel_msg.val.linear.y = di.y_magnitude
-                moved = True
-            elif (roll < di.r_roll_offset_right):
-                #move right ROS -y
-                status += "right | "
-                vel_msg.val.linear.y = -di.y_magnitude
-                moved = True
+            roll_offset_left = di.r_roll_offset_left
+            roll_offset_right = di.r_roll_offset_right
         else:
-            if (roll > di.l_roll_offset_left):
-                #move left ROS y
-                status += "left | "
-                vel_msg.val.linear.y = di.y_magnitude
-                moved = True
-            elif (roll < di.l_roll_offset_right):
-                #move right ROS -y
-                status += "right | "
-                vel_msg.val.linear.y = -di.y_magnitude
-                moved = True
+            roll_offset_left = di.l_roll_offset_left
+            roll_offset_right = di.l_roll_offset_right
+        #roll testing
+        if (roll > roll_offset_left):
+            #move left ROS y
+            status += "left | "
+            vel_msg.val.linear.y = di.y_magnitude
+        elif (roll < roll_offset_right):
+            #move right ROS -y
+            status += "right | "
+            vel_msg.val.linear.y = -di.y_magnitude
         #vertical movement ROS z (LEAP y)
         if (first_hand.palm_position.y > di.y_base + di.z_offset):
             #move up
             status += "up | "
             vel_msg.val.linear.z = di.z_magnitude
-            moved = True
         elif (first_hand.palm_position.y < di.y_base - di.z_offset):
             #move down
             status += "down | "
             vel_msg.val.linear.z = -di.z_magnitude
-            moved = True
         #rotation ROS angular z (LEAP y rotation)
         if (first_hand.is_right):
-            if (yaw > di.z_rotation_offset_small):
-                #right
-                status += "yaw right | "
-                vel_msg.val.angular.z = -di.y_rotation
-                moved = True
-            elif (yaw < -di.z_rotation_offset_large):
-                #left
-                status += "yaw left | "
-                vel_msg.val.angular.z = di.y_rotation
-                moved = True
+            rotation_offset_right = di.z_rotation_offset_small
+            rotation_offset_left = di.z_rotation_offset_large
         else:
-            if (yaw > di.z_rotation_offset_large):
-                #right
-                status += "yaw right | "
-                vel_msg.val.angular.z = -di.y_rotation
-                moved = True
-            elif (yaw < -di.z_rotation_offset_small):
-                #left
-                status += "yaw left | "
-                vel_msg.val.angular.z = di.y_rotation
-                moved = True
+            rotation_offset_right = di.z_rotation_offset_large
+            rotation_offset_left = di.z_rotation_offset_small
+        if (yaw > rotation_offset_right):
+            #right
+            status += "yaw right | "
+            vel_msg.val.angular.z = -di.y_rotation
+        elif (yaw < -rotation_offset_left):
+            #left
+            status += "yaw left | "
+            vel_msg.val.angular.z = di.y_rotation
 
         #takeoff and landing
         if (len(first_hand.fingers.extended()) < 2 and not di.fist):
-            if (is_landed):
+            if (di.is_landed):
                 di.pub_takeoff.publish()
                 status += "Takeoff | "
-                di.is_landed = not di.is_landed
             else:
                 di.pub_land.publish()
                 status += "Land | "
-                di.is_landed = not di.is_landed
             di.fist = True
         elif (len(first_hand.fingers.extended()) < 2 and di.fist):
             #nothing
