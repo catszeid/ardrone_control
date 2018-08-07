@@ -59,18 +59,15 @@ class my_twist:
 
     #check if all parameters of the Twist are 0
     def is_zero(self):
-        if (self.val.linear.x == 0.0 and
+        return (self.val.linear.x == 0.0 and
             self.val.linear.y == 0.0 and
             self.val.linear.z == 0.0 and
             self.val.angular.x == 0.0 and
             self.val.angular.y == 0.0 and
-            self.val.angular.z == 0.0):
-            return True
-        else:
-            return False
+            self.val.angular.z == 0.0)
 
 #drone info class
-class drone_info:
+class setting_info:
     def __init__(self):
         #initialize values
         #initialize publishers
@@ -120,6 +117,8 @@ class drone_info:
             rospy.logwarn("Low battery! Landing drone...")
             #land drone
             self.pub_land.publish()
+            if (state == 2):
+                exit()
 
 def talker(di):
 
@@ -232,11 +231,11 @@ def talker(di):
 def main():
     print("ARDrone 2.0 Leap Controller")
     #setup drone class
-    my_drone = drone_info()
+    info = setting_info()
     #init node
     rospy.init_node("leap_control")
     #setup subscriber
-    rospy.Subscriber("ardrone/navdata", Navdata, my_drone.callback)
+    rospy.Subscriber("ardrone/navdata", Navdata, info.callback)
     #spin
     rospy.spin()
 
